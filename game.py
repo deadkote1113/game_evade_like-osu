@@ -140,10 +140,10 @@ class Wall2(pygame.sprite.Sprite):
 def show_int():
     font = pygame.font.Font(None, 50)
     hp = 'жизни ' + str(HP)
-    text1 = font.render(hp, 1, (255, 0, 0))
+    text1 = font.render(hp, 1, (255, 255, 255))
     screen.blit(text1, (20, 20))
     ochki = 'очки ' + str(Score)
-    text2 = font.render(ochki, 1, (255, 0, 0))
+    text2 = font.render(ochki, 1, (255, 255, 255))
     screen.blit(text2, (850, 20))
 
 
