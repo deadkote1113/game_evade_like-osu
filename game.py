@@ -3,10 +3,12 @@ import os
 import random
 
 pygame.init()
-fps = 80
+fps = 30
 HP = 5
 Clock = 0
+Clock_dop = 0
 Score = 0
+Up_or_ahead = 10
 Life = True
 
 
@@ -56,7 +58,7 @@ class Enemy1(pygame.sprite.Sprite):
         self.rect.y = random.randrange(1, 10) * 100 - 12
 
     def update(self):
-        self.rect = self.rect.move(min(11, 3 + (Score // 12)), 0)
+        self.rect = self.rect.move(min(10, 3 + (Score // 12)), 0)
 
 
 class Enemy2(pygame.sprite.Sprite):
@@ -70,7 +72,53 @@ class Enemy2(pygame.sprite.Sprite):
         self.rect.y = 6
 
     def update(self):
-        self.rect = self.rect.move(0, min(11, 3 + (Score // 12)))
+        self.rect = self.rect.move(0, min(10, 3 + (Score // 12)))
+
+
+class Heal1(pygame.sprite.Sprite):
+    image = pygame.transform.scale(load_image("heal.png"), (24, 24))
+
+    def __init__(self, group):
+        super().__init__(group)
+        self.image = Heal1.image
+        self.rect = self.image.get_rect()
+        self.rect.y = random.randrange(5, 9) * 100 - 12
+        self.rect.x = -12
+
+    def update(self):
+        global Clock_dop, Up_or_ahead
+        Clock_dop += 1
+        if Clock_dop > 20 and Up_or_ahead % 2 == 0:
+            self.rect = self.rect.move(100, 0)
+            Clock_dop = 0
+            Up_or_ahead += 1
+        if Clock_dop > 20 and Up_or_ahead % 2 == 1:
+            self.rect = self.rect.move(0, -100)
+            Clock_dop = 0
+            Up_or_ahead -= 1
+
+
+class Heal2(pygame.sprite.Sprite):
+    image = pygame.transform.scale(load_image("heal.png"), (24, 24))
+
+    def __init__(self, group):
+        super().__init__(group)
+        self.image = Heal2.image
+        self.rect = self.image.get_rect()
+        self.rect.x = 988
+        self.rect.y = random.randrange(5, 9) * 100 - 12
+
+    def update(self):
+        global Clock_dop, Up_or_ahead
+        Clock_dop += 1
+        if Clock_dop > 20 and Up_or_ahead % 2 == 0:
+            self.rect = self.rect.move(0, -100)
+            Clock_dop = 0
+            Up_or_ahead += 1
+        if Clock_dop > 20 and Up_or_ahead % 2 == 1:
+            self.rect = self.rect.move(-100, 0)
+            Clock_dop = 0
+            Up_or_ahead -= 1
 
 
 class Wall1(pygame.sprite.Sprite):
@@ -105,15 +153,17 @@ def is_life():
         Life = False
 
 
-def collaid(sprite, group1, group2):
+def collaid(sprite, group1, group2, group3):
     global HP
     if pygame.sprite.spritecollide(sprite, group1, True):
         HP = HP - 1
     if pygame.sprite.spritecollide(sprite, group2, True):
         HP = HP - 1
+    if pygame.sprite.spritecollide(sprite, group3, True):
+        HP = HP + 1
 
 
-def wall(p, e1, e2, w1, w2, w3, w4, p_g):
+def wall(p, e1, e2, w1, w2, w3, w4, p_g, h1):
     global Score
     deid = pygame.sprite.spritecollide(w1, e1, True)
     if deid:
@@ -123,11 +173,16 @@ def wall(p, e1, e2, w1, w2, w3, w4, p_g):
     if deid1:
         Score += len(deid1)
         deid1 = []
+    deid2 = pygame.sprite.spritecollide(w3, h1, True)
+    if deid2:
+        Score += len(deid2)
+        deid2 = []
 
 
 def spawn():
-    global Clock
+    global Clock, Clock_dop
     Clock += min(30, 8 + (Score // 12))
+    Clock_dop += 1
     if Clock > 600:
         for i in range(min(6, 3 + (Score // 12))):
             saiori1 = Enemy1(enemys1)
@@ -135,6 +190,12 @@ def spawn():
         for j in range(min(6, 3 + (Score // 12))):
             saiori2 = Enemy2(enemys2)
         Clock = 0
+        if Score > -1 and Clock_dop > 150 + (Score // 6) and random.randint(1, 100) > 49:
+            saiori3 = Heal1(heal)
+            Clock_dop = 0
+        elif Score > -1 and Clock_dop > 150:
+            saiori4 = Heal2(heal)
+            Clock_dop = 0
 
 
 background_image = load_image("back1.png")
@@ -148,13 +209,15 @@ monk = M(player)
 
 enemys1 = pygame.sprite.Group()
 enemys2 = pygame.sprite.Group()
+heal = pygame.sprite.Group()
+# heal1 = pygame.sprite.Group()
 wall_1 = pygame.sprite.Group()
 
 wall1 = Wall1(wall_1)
 wall1.rect = monk.image.get_rect()
-wall1.rect.x = 995
+wall1.rect.x = width - 5
 wall1.rect.y = 0
-wall1.rect.h = 1000
+wall1.rect.h = height
 wall1.rect.w = 10
 
 wall2 = Wall1(wall_1)
@@ -166,13 +229,15 @@ wall3 = Wall2(wall_1)
 wall3.rect = monk.image.get_rect()
 wall3.rect.x = 0
 wall3.rect.y = 0
+wall3.rect.h = 10
+wall3.rect.w = width
 
 wall4 = Wall2(wall_1)
 wall4.rect = monk.image.get_rect()
 wall4.rect.x = 0
-wall4.rect.y = 995
+wall4.rect.y = height - 5
 wall4.rect.h = 10
-wall4.rect.w = 1000
+wall4.rect.w = width
 
 screen = pygame.display.set_mode(size)
 running = True
@@ -200,13 +265,16 @@ while running:
     if Life == True:
         screen.blit(background_image, [0, 0])
         show_int()
-        wall(monk, enemys1, enemys2, wall1, wall2, wall3, wall4, player)
-        collaid(monk, enemys1, enemys2)
+        wall(monk, enemys1, enemys2, wall1, wall2, wall3, wall4, player, heal)
+        collaid(monk, enemys1, enemys2, heal)
         spawn()
         enemys1.update()
         enemys2.update()
+        heal.update()
+
         enemys1.draw(screen)
         enemys2.draw(screen)
+        heal.draw(screen)
         wall_1.draw(screen)
         player.draw(screen)
     else:
